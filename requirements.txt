@@ -1,0 +1,155 @@
+** BACKGROUND **
+
+== Linux Modules ==
+
+When configuring a Linux kernel for compilation, support to features
+can be optionally enabled as modules instead of adding them directly to
+the kernel.
+
+A kernel module is a file with .ko extension.  For example, support
+to Intel Graphics chipset, if enabled as a module, generates the file
+i915.ko that is the module i915.
+
+In a running Linux system, the commands modprobe and insmod are used
+to attach modules to the running kernel so the related features
+can be accessed. The command lsmod shows the current modules that
+are attached to the running kernel, and the command rmmod removes a
+module from the kernel. The module files are typically located under
+/lib/modules/<your_kernel_version>.
+
+A module may depend on other modules to be previously loaded to the
+kernel.  Command modinfo shows the dependencies of a module. Note that
+these dependencies can also have other dependences, and so on.
+
+== Init filesystems ==
+
+An approach to better manage Linux kernels that must support distinct
+hardwares that are constrained in memory and disk (such as embedded
+systems) is to come up with a highly modular kernel, where almost all
+support is enabled as modules, and then provide to the booting kernel
+a small filesystem (called initrd or initramfs) containing only the
+specific modules for the hardware.
+
+This way the kernel image is the same for all hardware types,
+and different modules in the init filesystem are early loaded for
+enabling support for specific hardware chipsets. Init filesystems are
+typically very small, containing the minimum set of modules and programs
+(e.g. insmod) required to attach the modules to the kernel. After the
+modules are loaded, the real root filesystem of the computer takes over
+and the boot process continues.
+
+== Track module dependencies ==
+
+When a kernel and modules are just compiled (but before the kernel is
+booted), the init filesystem is generated for packing a minimum set of
+modules for supporting the target hardware. The problem is that adding
+only top-level modules (e.g. i915) to the init filesystem fails because
+other dependent modules are also required. In the other hand, adding all
+modules that were compiled is a waste of resources in embedded systems
+with very limited memory and disk.
+
+The solution is to investigate what modules are required by the top-level
+mdules and add them to the init ramfs. Note that this is a recursive
+process because the dependencies can also have dependencies, and so on.
+
+The init filesystem must finally contain:
+a) the minimum set of all modules that are required to enable hardware
+features
+b) the order by which they must be loaded by insmod, honoring their
+dependencies
+
+
+** OBJECTIVE **
+
+Create the application "track_modules" that investigates the module
+tree of a compiled (but not running) Linux kernel and scan for module
+dependencies.  Desired features of this application are:
+
+1. Receives an optional command line parameter (--basedir, -b) that is
+the base directory where the kernel modules were generated. If absent, the
+application should use the standard module base directory at /lib/modules.
+
+2. Receives an optional command line parameter (--kernel, -k) that is
+the version of the compiled kernel. If absent, the application should
+use the version of the running kernel as given by command uname.
+
+3. Receives the desired modules that must be scanned for dependencies
+as arguments of the command line.
+
+4. Produces in the standard output a list of modules (one module per
+line).  This list has the following properties:
+- contains the modules given in the command line.
+- contains all dependencies (direct and indirect) that are required to
+load the modules.
+- is sorted in a way that honors the dependencies, ie, a module that
+appears in the list cannot depend on subsequent modules.
+- does not contain modules that were not informed as arguments or are not
+ dependencies of them.
+- does not contain duplicate modules.
+
+5. Produces error messages the standard error in case something goes wrong.
+
+6. Produces a correct exit code for success or error, according to Linux
+standards.
+
+7. When executed without arguments, produces a small usage hint in stderr.
+
+8. When executed with option -h or --help, produces a detailed help
+message in stdout describing the purpose, inputs, parameters and outputs.
+
+9. When executed with option -v or --verbose, produces messages in stderr
+for each package being considered and why (ie, who requires it).
+
+10. When executed with option -V or --version, produces in stdout the
+version of the software.
+
+== Example of a desired execution ==
+
+$ ./track_modules --basedir sample --kernel 5.4.48-gentoo-tormenta16 915 atkbd ext4 essiv aesni_intel nvme ahci dm-crypt xhci-pci usb-storage
+agpgart
+i2c-core
+drm
+fb_sys_fops
+syscopyarea
+sysfillrect
+sysimgblt
+drm_kms_helper
+intel-gtt
+backlight
+video
+i2c-algo-bit
+i915
+atkbd
+mbcache
+jbd2
+ext4
+authenc
+essiv
+glue_helper
+cryptd
+crypto_simd
+aesni_intel
+nvme-core
+nvme
+libata
+libahci
+ahci
+dm-mod
+dm-crypt
+xhci-hcd
+xhci-pci
+usb-storage
+
+== Approach suggestions ==
+
+1. The sample directory in this repository contains a real module tree
+that can be used for testing purposes.
+
+2. The command modinfo shows the direct dependencies of a single
+module file. For example, to investigate the direct dependencies of
+the module i915 that is inside the module tree of the kernel version
+5.4.48-gentoo-tormenta16 that is inside the sample directory:
+
+$ modinfo -k 5.4.48-gentoo-tormenta16 --basedir sample --field depends i915
+drm_kms_helper,drm,intel-gtt,i2c-core,backlight,video,i2c-algo-bit
+
