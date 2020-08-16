@@ -1,12 +1,13 @@
 #!/bin/bash
-
-F='/tmp/mod.txt'
-rm -f $F
-touch $F
+set -e
+set -o pipefail
+F=`mktemp`
 
 #No-reps(no repetition) we use this function to filter lines in stdin and give
 #same lines whithout repetitions in the same order.
 
+	test $1="-h" -o $1="--help" && \
+	#	echo ""
 no-reps(){
 	while read m; do
 		fgrep -qw $m $F || {
@@ -21,12 +22,12 @@ no-reps(){
 #Notes: there may be repetition
 
 deps_mod1(){
-	test -n "$1" || return
-		n=$@
-		/usr/sbin/modinfo -k 5.4.48-gentoo-tormenta16 --basedir sample --field depends $n | tr "," "\n" | \
-		while read l; do
-			deps_mod1 $l
-		done
+	test -n "$1" || return 0
+	n=$@
+	/usr/sbin/modinfo -k 5.4.48-gentoo-tormenta16 --basedir sample --field depends $n | tr "," "\n" | \
+	while read l; do
+		deps_mod1 $l
+	done
 	echo $n
 }
 
@@ -38,3 +39,4 @@ deps_modn(){
 }
 
 deps_modn $@ | no-reps
+rm $F
