@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -euo pipefail
 F=`mktemp`
 basedir=""
@@ -13,6 +14,7 @@ shift $(($OPTIND-1))
 
 #No-reps(no repetition) we use this function to filter lines in stdin and give
 #same lines whithout repetitions in the same order.
+
 
 no-reps(){
 	while read m; do
