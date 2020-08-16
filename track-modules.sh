@@ -1,13 +1,19 @@
 #!/bin/bash
-set -e
-set -o pipefail
+set -euo pipefail
 F=`mktemp`
+basedir=""
+
+while getopts "b:" OPT; do
+        case $OPT in
+    	    b) basedir=$OPTARG
+            ;;
+	esac
+done
+shift $(($OPTIND-1))
 
 #No-reps(no repetition) we use this function to filter lines in stdin and give
 #same lines whithout repetitions in the same order.
 
-	test $1="-h" -o $1="--help" && \
-	#	echo ""
 no-reps(){
 	while read m; do
 		fgrep -qw $m $F || {
@@ -23,10 +29,11 @@ no-reps(){
 
 deps_mod1(){
 	test -n "$1" || return 0
-	n=$@
-	/usr/sbin/modinfo -k 5.4.48-gentoo-tormenta16 --basedir sample --field depends $n | tr "," "\n" | \
+	n=$1
+	/usr/sbin/modinfo -k 5.4.48-gentoo-tormenta16 --basedir $basedir --field depends $n | tr "," "\n" | \
+
 	while read l; do
-		deps_mod1 $l
+		test -n "$l" && deps_mod1 $l || :
 	done
 	echo $n
 }
