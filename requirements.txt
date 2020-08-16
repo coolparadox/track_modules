@@ -105,7 +105,7 @@ version of the software.
 
 == Example of a desired execution ==
 
-$ ./track_modules --basedir sample --kernel 5.4.48-gentoo-tormenta16 915 atkbd ext4 essiv aesni_intel nvme ahci dm-crypt xhci-pci usb-storage
+$ ./track_modules --basedir sample --kernel 5.4.48-gentoo-tormenta16 i915 atkbd ext4 essiv aesni_intel nvme ahci dm-crypt xhci-pci usb-storage
 agpgart
 i2c-core
 drm
